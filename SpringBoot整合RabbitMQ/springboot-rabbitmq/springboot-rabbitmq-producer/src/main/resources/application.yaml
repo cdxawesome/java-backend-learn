@@ -1,0 +1,8 @@
+# 配置rabbitmq的连接信息
+spring:
+  rabbitmq:
+    host: 120.77.203.191
+    username: rico
+    port: 5672
+    password: 199418
+    virtual-host: /ricohost

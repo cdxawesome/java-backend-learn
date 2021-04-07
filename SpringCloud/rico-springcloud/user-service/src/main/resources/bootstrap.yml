@@ -1,0 +1,28 @@
+spring:
+  cloud:
+    config:
+      # 要与仓库中的配置文件的application保持一致
+      name: user
+      # 要与仓库中的配置文件的profile保持一致
+      profile: dev
+      # 要与仓库中的配置文件所在的分支一致
+      label: master
+      discovery:
+        # 启用配置中心
+        enabled: true
+        # 配置中心服务名
+        service-id: config-server
+
+  # 配置rabbitmq信息，如果都与默认值一样则不需要配置
+  rabbitmq:
+    host: 120.77.203.191
+    port: 5672
+    username: rico
+    password: 199418
+    virtual-host: /ricohost
+
+eureka:
+  client:
+    service-url:
+      # 将此服务注册进eureka
+      defaultZone: http://127.0.0.1:8088/eureka

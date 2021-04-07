@@ -1,0 +1,31 @@
+server:
+  port: 8091
+spring:
+  application:
+    name: config-server
+  # 指定配置中心服务器的git仓库地址
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://github.com.cnpmjs.org/hoktextbox/config-server.git
+  # 配置rabbitmq信息，如果都与默认值一样则不需要配置
+  rabbitmq:
+    host: 120.77.203.191
+    port: 5672
+    username: rico
+    password: 199418
+    virtual-host: /ricohost
+
+eureka:
+  client:
+    service-url:
+      # 将此服务注册进eureka
+      defaultZone: http://127.0.0.1:8088/eureka
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # 暴露触发消息总线的地址
+        include: bus-refresh

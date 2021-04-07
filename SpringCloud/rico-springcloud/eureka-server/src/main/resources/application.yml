@@ -1,0 +1,15 @@
+# 指定Eureka服务器的端口
+server:
+  # 这个表达式的意思是：如果port有值，则用自身的值，如果没有，则用8088
+  port: ${port:8088}
+spring:
+  application:
+    # 指定此应用的名称
+    name: ${serverName:eureka-server}
+eureka:
+  instance:
+    hostname: 127.0.0.1
+  client:
+    service-url:
+      # eureka的服务地址，如果是集群的话，需要指定其他集群的eureka地址
+      defaultZone: ${defaultZone:http://127.0.0.1:8088/eureka/}

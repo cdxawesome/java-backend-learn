@@ -1,0 +1,18 @@
+spring:
+  application:
+    # 配置此应用的名称
+    name: consumer-demo
+eureka:
+  client:
+    # 配置eureka服务器的地址
+    service-url:
+      defaultZone: http://127.0.0.1:8088/eureka/,http://127.0.0.1:8089/eureka/
+hystrix:
+  command:
+    default: #也可以针对多个服务
+      execution:
+        isolation:
+          thread:
+            timeoutInMilliseconds: 4000 # 设置hystrix的超时时间为4000ms
+
+

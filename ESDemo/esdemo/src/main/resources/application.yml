@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: search-sevice
+
+# 自定义的数据
+rico:
+  elasticsearch:
+    hostlist: 127.0.0.1:9200 # 多个节点可以用逗号分隔

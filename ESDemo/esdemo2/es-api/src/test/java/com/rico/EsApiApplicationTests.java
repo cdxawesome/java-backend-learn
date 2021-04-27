@@ -2,7 +2,10 @@ package com.rico;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rico.domain.User;
+import com.rico.repository.MyRepository;
 import jdk.nashorn.internal.parser.JSONParser;
+import org.apache.lucene.queries.function.FunctionValues;
+import org.apache.lucene.util.Counter;
 import org.elasticsearch.action.DocWriteRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.get.GetRequest;
@@ -18,26 +21,50 @@ import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.client.indices.GetIndexRequest;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.aggregations.Aggregation;
+import org.elasticsearch.search.aggregations.AggregationBuilder;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.Aggregations;
+import org.elasticsearch.search.aggregations.bucket.filter.Filter;
+import org.elasticsearch.search.aggregations.bucket.filter.FilterAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
+import org.elasticsearch.search.aggregations.metrics.Avg;
+import org.elasticsearch.search.aggregations.metrics.AvgAggregationBuilder;
+import org.elasticsearch.search.aggregations.metrics.ValueCount;
+import org.elasticsearch.search.aggregations.metrics.ValueCountAggregationBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
+import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.query.Criteria;
+import org.springframework.data.elasticsearch.core.query.CriteriaQuery;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 
 import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 @SpringBootTest
 class EsApiApplicationTests {
 
     @Autowired
     private RestHighLevelClient restHighLevelClient;
+
+    @Autowired
+    private MyRepository myRepository;
+
+    @Autowired
+    private ElasticsearchRestTemplate elasticsearchRestTemplate;
 
     @Test
     void contextLoads() throws IOException {
@@ -64,32 +91,6 @@ class EsApiApplicationTests {
         restHighLevelClient.close();
     }
 
-    @Test
-    void myTest2() throws IOException {
-        // 创建一个user对象
-        User user = new User();
-        user.setName("dylan2");
-        user.setAge(27);
-        user.setBirthday(new Date());
-
-        // 将user对象转成json字符串
-        ObjectMapper objectMapper = new ObjectMapper();
-        String userStr = objectMapper.writeValueAsString(user);
-
-        // 创建索引，并且设置document参数，将json字符串作为数据存入
-        IndexRequest request = new IndexRequest("users")
-                .id("2")
-                .opType(DocWriteRequest.OpType.CREATE)
-                .source(userStr, XContentType.JSON)
-                .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-
-        // 发送请求，获取响应的结果
-        IndexResponse response = restHighLevelClient.index(request, RequestOptions.DEFAULT);
-        System.out.println(response.toString());
-
-        // 释放资源
-        restHighLevelClient.close();
-    }
 
     // 删除索引
     @Test
@@ -134,5 +135,144 @@ class EsApiApplicationTests {
             System.out.println("=================================");
         }
 
+    }
+
+    // 查询年龄为27岁的用户数据
+    @Test
+    void myTest6() {
+        User rico = myRepository.findByIdOrAgeOrName(null, 27, null);
+        System.out.println(rico);
+    }
+
+
+    // 插入一条user数据
+    @Test
+    void myTest7() throws IOException {
+        User user = User.builder()
+                .name("rico3")
+                .age(35)
+                .id(3L)
+                .birthday(new Date())
+                .build();
+
+        User save = myRepository.save(user);
+        System.out.println(save);
+        restHighLevelClient.close();
+    }
+
+    // 删除年龄大于或等于29岁的用户的数据
+    @Test
+    void myTest8() throws IOException {
+        myRepository.deleteByAgeGreaterThanEqual(29);
+        restHighLevelClient.close();
+    }
+
+    // 使用elasticsearchRestTemplate来查询数据
+    @Test
+    void myTest9() {
+        // 创建一个query，QueryBuilders下可以选择查询方式
+        NativeSearchQuery nativeSearchQuery = new NativeSearchQuery(QueryBuilders.matchAllQuery());
+        SearchHits<User> search = elasticsearchRestTemplate.search(nativeSearchQuery, User.class);
+        for (org.springframework.data.elasticsearch.core.SearchHit<User> userSearchHit : search) {
+            User content = userSearchHit.getContent();
+            System.out.println(content);
+        }
+    }
+
+    @Test
+    void myTest10() {
+        // 创建一个query，QueryBuilders下可以选择查询方式
+        NativeSearchQuery nativeSearchQuery = new NativeSearchQuery(QueryBuilders.matchAllQuery());
+        SearchHits<User> search = elasticsearchRestTemplate.search(nativeSearchQuery, User.class);
+        for (org.springframework.data.elasticsearch.core.SearchHit<User> userSearchHit : search) {
+            User content = userSearchHit.getContent();
+            System.out.println(content);
+        }
+    }
+
+    @Test
+    void myTest11() {
+        NativeSearchQueryBuilder builder = new NativeSearchQueryBuilder();
+        builder.withQuery(QueryBuilders.matchAllQuery());
+        // 搜索age大于27的user数据,这里的写法其实和json查询语句的写法一样的，如下
+        /*
+        GET /bank/_search
+        {
+          "query": {
+            "bool": {
+              "must": { "match_all": {} },
+              "filter": {
+                "range": {
+                  "balance": {
+                    "gte": 20000,
+                    "lte": 30000
+                  }
+                }
+              }
+            }
+          }
+        }
+         */
+        builder.withQuery(QueryBuilders.boolQuery()
+                .must(QueryBuilders.matchAllQuery())
+                .filter(QueryBuilders.rangeQuery("age").gte(27)));
+        NativeSearchQuery query = builder.build();
+        SearchHits<User> searchHits = elasticsearchRestTemplate.search(query, User.class);
+        for (org.springframework.data.elasticsearch.core.SearchHit<User> searchHit : searchHits) {
+            System.out.println(searchHit.getContent());
+        }
+    }
+
+    // 查询users下所有用户的年龄平均值
+    @Test
+    public void myTest12() throws IOException {
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        AvgAggregationBuilder avgAggregationBuilder = AggregationBuilders.avg("average_age").field("age");
+        searchSourceBuilder.aggregation(avgAggregationBuilder);
+
+        SearchRequest request = new SearchRequest("users");
+        request.source(searchSourceBuilder);
+
+        SearchResponse response = restHighLevelClient.search(request, RequestOptions.DEFAULT);
+        Aggregations aggregations = response.getAggregations();
+        Avg average_age = aggregations.get("average_age");
+        System.out.println(average_age.getValue());
+    }
+
+    // 查询年龄大于10岁的用户的数量，使用restHighLevelClient
+    @Test
+    public void myTest13() throws IOException {
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        FilterAggregationBuilder filter = AggregationBuilders
+                .filter("age_gt_10", QueryBuilders.rangeQuery("age").gt(10));
+        filter.subAggregation(AggregationBuilders.count("group_by_count").field("name"));
+        searchSourceBuilder.aggregation(filter);
+
+        SearchRequest request = new SearchRequest("users");
+        request.source(searchSourceBuilder);
+
+        SearchResponse response = restHighLevelClient.search(request, RequestOptions.DEFAULT);
+        Aggregations aggregations = response.getAggregations();
+        Filter age_gt_10 = aggregations.get("age_gt_10");
+        Aggregations aggregations1 = age_gt_10.getAggregations();
+        ValueCount group_by_count = aggregations1.get("group_by_count");
+        System.out.println(group_by_count.getValue());
+    }
+
+    // 查询年龄大于10岁的用户的数量，使用elasticsearchRestTemplate
+    // 不管是使用restHighLevelClient还是使用elasticsearchRestTemplate，还是使用ElasticsearchRepository，都需要先初始化restHighLevelClient
+    // 当使用前两者的时候，要注意查询的语法，对照json格式的请求语法
+    @Test
+    public void myTest14() {
+        NativeSearchQueryBuilder builder = new NativeSearchQueryBuilder();
+        builder.addAggregation(AggregationBuilders
+                .filter("age_gt_10", QueryBuilders.rangeQuery("age").gt(10))
+                .subAggregation(AggregationBuilders.count("group_by_count").field("name")));
+        NativeSearchQuery searchQuery = builder.build();
+        SearchHits<User> search = elasticsearchRestTemplate.search(searchQuery, User.class);
+        Filter age_gt_10 = search.getAggregations().get("age_gt_10");
+        Aggregations aggregations = age_gt_10.getAggregations();
+        ValueCount count = aggregations.get("group_by_count");
+        System.out.println(count.getValue());
     }
 }
